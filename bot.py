@@ -13,8 +13,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Файл для хранения данных о пользователях
-USERS_FILE = 'users_data.json'
+# Файл для хранения данных о пользователях (абсолютный путь)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USERS_FILE = os.path.join(BASE_DIR, 'users_data.json')
 
 def load_users_data():
     """Загружает данные о пользователях из файла"""
