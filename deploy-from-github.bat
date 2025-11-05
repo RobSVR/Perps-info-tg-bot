@@ -14,7 +14,7 @@ echo.
 
 REM Настройки (измените на свои)
 set GITHUB_REPO=https://github.com/RobSVR/Perps-info-tg-bot.git
-set SERVER=ВАШ_IP_АДРЕС
+set SERVER=45.132.19.34
 set USER=root
 set REMOTE_DIR=/opt/Perps-info-tg-bot
 

@@ -1,7 +1,10 @@
 import logging
+import json
+import os
+from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-from config import BOT_TOKEN, CHANNEL_ID, CHANNEL_ID_NUMERIC, PROJECTS_INFO, CATEGORIES
+from config import BOT_TOKEN, CHANNEL_ID, CHANNEL_ID_NUMERIC, PROJECTS_INFO, CATEGORIES, ADMIN_IDS
 
 # Настройка логирования
 logging.basicConfig(
@@ -9,6 +12,47 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+# Файл для хранения данных о пользователях
+USERS_FILE = 'users_data.json'
+
+def load_users_data():
+    """Загружает данные о пользователях из файла"""
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Ошибка при загрузке данных пользователей: {e}")
+            return {}
+    return {}
+
+def save_users_data(users_data):
+    """Сохраняет данные о пользователях в файл"""
+    try:
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении данных пользователей: {e}")
+
+def save_user(user_id, username, first_name, last_name=None):
+    """Сохраняет информацию о пользователе"""
+    users_data = load_users_data()
+    
+    if str(user_id) not in users_data:
+        users_data[str(user_id)] = {
+            'username': username,
+            'first_name': first_name,
+            'last_name': last_name,
+            'first_seen': datetime.now().isoformat(),
+            'last_seen': datetime.now().isoformat(),
+            'total_interactions': 0
+        }
+    else:
+        users_data[str(user_id)]['last_seen'] = datetime.now().isoformat()
+        users_data[str(user_id)]['total_interactions'] = users_data[str(user_id)].get('total_interactions', 0) + 1
+    
+    save_users_data(users_data)
 
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Проверяет, подписан ли пользователь на канал"""
@@ -37,6 +81,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /start"""
     user = update.effective_user
     logger.info(f"Пользователь {user.first_name} (ID: {user.id}) запустил бота")
+    
+    # Сохраняем информацию о пользователе
+    save_user(user.id, user.username or '', user.first_name or '', user.last_name)
     
     # Проверяем подписку на канал
     is_subscribed = await check_subscription(update, context)
@@ -307,6 +354,39 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     await update.message.reply_text(help_text, parse_mode='HTML')
 
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик команды /stats - показывает статистику пользователей"""
+    user = update.effective_user
+    
+    # Проверяем, является ли пользователь администратором
+    if ADMIN_IDS and user.id not in ADMIN_IDS:
+        await update.message.reply_text("❌ У вас нет прав для выполнения этой команды.")
+        return
+    
+    users_data = load_users_data()
+    total_users = len(users_data)
+    
+    if total_users == 0:
+        await update.message.reply_text("📊 <b>Статистика бота</b>\n\n" + "Пользователей пока нет.", parse_mode='HTML')
+        return
+    
+    # Подсчитываем активных пользователей (которые использовали бота за последние 7 дней)
+    from datetime import datetime, timedelta
+    week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+    active_users = sum(1 for user_info in users_data.values() if user_info.get('last_seen', '') >= week_ago)
+    
+    # Подсчитываем общее количество взаимодействий
+    total_interactions = sum(user_info.get('total_interactions', 0) for user_info in users_data.values())
+    
+    stats_text = (
+        "📊 <b>Статистика бота</b>\n\n"
+        f"👥 <b>Всего пользователей:</b> {total_users}\n"
+        f"🟢 <b>Активных за неделю:</b> {active_users}\n"
+        f"💬 <b>Всего взаимодействий:</b> {total_interactions}\n"
+    )
+    
+    await update.message.reply_text(stats_text, parse_mode='HTML')
+
 def main() -> None:
     """Основная функция запуска бота"""
     if not BOT_TOKEN:
@@ -319,6 +399,7 @@ def main() -> None:
     # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("stats", stats_command))
     application.add_handler(CallbackQueryHandler(handle_project_info, pattern="^project_"))
     application.add_handler(CallbackQueryHandler(handle_category_selection, pattern="^category_"))
     application.add_handler(CallbackQueryHandler(show_trading_strategies, pattern="^trading_strategies$"))

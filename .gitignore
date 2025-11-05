@@ -23,6 +23,9 @@ ENV/
 *.log
 logs/
 
+# User data
+users_data.json
+
 # OS
 .DS_Store
 Thumbs.db

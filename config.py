@@ -11,6 +11,11 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 CHANNEL_ID = os.getenv('CHANNEL_ID', '@your_channel_username')
 CHANNEL_ID_NUMERIC = os.getenv('CHANNEL_ID_NUMERIC', '-1001234567890')
 
+# ID администратора (для команды /stats)
+# Можно указать несколько ID через запятую: "123456789,987654321"
+ADMIN_IDS = os.getenv('ADMIN_IDS', '').split(',') if os.getenv('ADMIN_IDS') else []
+ADMIN_IDS = [int(admin_id.strip()) for admin_id in ADMIN_IDS if admin_id.strip()]
+
 # Информация о проектах с категориями
 PROJECTS_INFO = {
     'backpack': {
