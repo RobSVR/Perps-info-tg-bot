@@ -1,7 +1,7 @@
 import logging
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from config import BOT_TOKEN, CHANNEL_ID, CHANNEL_ID_NUMERIC, PROJECTS_INFO, CATEGORIES, ADMIN_IDS
@@ -54,6 +54,7 @@ def save_user(user_id, username, first_name, last_name=None):
         users_data[str(user_id)]['total_interactions'] = users_data[str(user_id)].get('total_interactions', 0) + 1
     
     save_users_data(users_data)
+
 
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Проверяет, подписан ли пользователь на канал"""
@@ -114,7 +115,8 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     """Показывает главное меню с кнопками категорий"""
     keyboard = [
         [InlineKeyboardButton("📈 Фарм поинтов трейдингом", callback_data="category_trading")],
-        [InlineKeyboardButton("💰 Фарм стейблкоинами (стейкинг)", callback_data="category_staking")]
+        [InlineKeyboardButton("💰 Фарм стейблкоинами (стейкинг)", callback_data="category_staking")],
+        [InlineKeyboardButton("ℹ️ Информация о TGE проектов", callback_data="tge_info")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -125,7 +127,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "Будем благодарны за любые отзывы и предложения по улучшению бота.\n\n"
         "Если вы отрабатываете конкретный проект и у вас есть информация по поинтам, будем благодарны если поделитесь с нами.\n\n"
         "Писать сюда: @RobSVR\n\n"
-        "<b>⬇️Выберите тип фарминга из двух вариантов ниже⬇️</b>"
+        "<b>⬇️Выберите нужную категорию ниже⬇️</b>"
     )
     
     if update.callback_query:
@@ -140,6 +142,35 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=reply_markup,
             parse_mode='HTML'
         )
+
+async def show_tge_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает информацию о TGE проектов"""
+    query = update.callback_query
+    await query.answer()
+
+    text = (
+        "🗓️ <b>Информация о TGE проектов</b>\n\n"
+        '<a href="https://backpack.exchange/join/robsvr">Backpack</a> - Сейчас идет 3 сезон. 4 сезон будет последним перед TGE. '
+        "Таким образом TGE ожидается в феврале 2026.\n\n"
+        '<a href="https://app.lighter.xyz/trade/ETH">Lighter</a> - Конец 2025 года.\n\n'
+        '<a href="https://pro.edgex.exchange/referral/ROBSVR">edgeX</a> - Конец 2025 года.\n\n'
+        '<a href="https://app.paradex.trade/r/robsvr">Paradex</a> - конец 2025/начало 2026. '
+        "Первого августа сезон продлили на 6 месяцев.\n\n"
+        '<a href="https://www.avantisfi.com/referral?code=uridiumfarmer">Avantis</a> - уже в мейннете. Сейчас идет второй сезон. '
+        "Конец - 28 Февраля 2026.\n\n"
+        '<a href="https://www.asterdex.com/en/referral/6EE365">Aster</a> - уже в мейннете. Сейчас идет третий сезон. Конец - скоро будет объявлен.'
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("🔙 Назад к меню", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text(
+        text=text,
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
 
 async def show_category_projects(update: Update, context: ContextTypes.DEFAULT_TYPE, category: str) -> None:
     """Показывает проекты в выбранной категории"""
@@ -169,7 +200,10 @@ async def show_category_projects(update: Update, context: ContextTypes.DEFAULT_T
                 'backpack': '🎒',
                 'lighter': '🔥',
                 'aster': '⭐',
-                'avantis': '🚀'
+                'avantis': '🚀',
+                'edgex': '⚡',
+                'paradex': '🌐',
+                'hibachi': '🍱'
             }
             emoji = emoji_map.get(project_key, '📊')
             keyboard.append([InlineKeyboardButton(f"{emoji} {project_name}", callback_data=f"project_{project_key}_{category}")])
@@ -350,7 +384,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "3. Выберите интересующий проект\n"
         "4. Получите подробную информацию\n\n"
         "<b>Поддерживаемые проекты:</b>\n"
-        "• Backpack, Lighter, Aster, Avantis"
+        "• Backpack, Lighter, Aster, Avantis, edgeX, Paradex, Hibachi"
     )
     
     await update.message.reply_text(help_text, parse_mode='HTML')
@@ -388,6 +422,78 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     
     await update.message.reply_text(stats_text, parse_mode='HTML')
 
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик команды /broadcast - отправка сообщения всем пользователям"""
+    user = update.effective_user
+    
+    # Проверяем, является ли пользователь администратором
+    if ADMIN_IDS and user.id not in ADMIN_IDS:
+        await update.message.reply_text("❌ У вас нет прав для выполнения этой команды.")
+        return
+    
+    # Получаем текст сообщения (все аргументы после /broadcast)
+    if not context.args:
+        await update.message.reply_text(
+            "📢 <b>Рассылка сообщений</b>\n\n"
+            "Использование: /broadcast <текст сообщения>\n\n"
+            "Пример: /broadcast Привет! Это тестовое сообщение для всех пользователей.",
+            parse_mode='HTML'
+        )
+        return
+    
+    message_text = ' '.join(context.args)
+    
+    # Загружаем список пользователей
+    users_data = load_users_data()
+    total_users = len(users_data)
+    
+    if total_users == 0:
+        await update.message.reply_text("❌ Нет пользователей для рассылки.")
+        return
+    
+    # Отправляем сообщение о начале рассылки
+    status_message = await update.message.reply_text(
+        f"📤 Начинаю рассылку сообщения {total_users} пользователям...\n\n"
+        f"Сообщение: {message_text[:100]}{'...' if len(message_text) > 100 else ''}"
+    )
+    
+    # Отправляем сообщение каждому пользователю
+    sent_count = 0
+    failed_count = 0
+    blocked_count = 0
+    
+    for user_id_str, user_info in users_data.items():
+        try:
+            user_id = int(user_id_str)
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=message_text,
+                parse_mode='HTML'
+            )
+            sent_count += 1
+            logger.info(f"Сообщение отправлено пользователю {user_id} ({user_info.get('first_name', 'Unknown')})")
+        except Exception as e:
+            error_msg = str(e).lower()
+            if 'blocked' in error_msg or 'chat not found' in error_msg or 'bot was blocked' in error_msg:
+                blocked_count += 1
+                logger.warning(f"Пользователь {user_id_str} заблокировал бота")
+            else:
+                failed_count += 1
+                logger.error(f"Ошибка при отправке пользователю {user_id_str}: {e}")
+    
+    # Обновляем статус
+    result_text = (
+        f"✅ <b>Рассылка завершена!</b>\n\n"
+        f"📊 <b>Статистика:</b>\n"
+        f"👥 Всего пользователей: {total_users}\n"
+        f"✅ Успешно отправлено: {sent_count}\n"
+        f"❌ Ошибок: {failed_count}\n"
+        f"🚫 Заблокировали бота: {blocked_count}"
+    )
+    
+    await status_message.edit_text(result_text, parse_mode='HTML')
+    await update.message.reply_text("✅ Рассылка завершена! Проверьте статистику выше.")
+
 def main() -> None:
     """Основная функция запуска бота"""
     if not BOT_TOKEN:
@@ -401,9 +507,11 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("stats", stats_command))
+    application.add_handler(CommandHandler("broadcast", broadcast_command))
     application.add_handler(CallbackQueryHandler(handle_project_info, pattern="^project_"))
     application.add_handler(CallbackQueryHandler(handle_category_selection, pattern="^category_"))
     application.add_handler(CallbackQueryHandler(show_trading_strategies, pattern="^trading_strategies$"))
+    application.add_handler(CallbackQueryHandler(show_tge_info, pattern="^tge_info$"))
     application.add_handler(CallbackQueryHandler(back_to_menu, pattern="^back_to_menu$"))
     application.add_handler(CallbackQueryHandler(back_to_categories, pattern="^back_to_categories$"))
     application.add_handler(CallbackQueryHandler(check_subscription_callback, pattern="^check_subscription$"))
