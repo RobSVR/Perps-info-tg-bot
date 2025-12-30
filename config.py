@@ -55,7 +55,7 @@ PROJECTS_INFO = {
         'categories': {
             'trading': {
                 'description': (
-                    '<a href="https://app.lighter.xyz/trade/ETH">Ссылка для участия в проекте</a>\n\n'
+                    '<a href="http://app.lighter.xyz/?referral=ROBSVR">Ссылка для участия в проекте</a>\n\n'
                     '<b>1. Общая информация:</b>\n'
                     'Lighter - топ-2 perpdex по объемам на данный момент. В комьюнити считают главным конкурентом Hyperliquid. В отличии от Hyperliquid киты на Лайтере могут торговать приватно.\n\n'
                     '<b>2. Информация по поинтам:</b>\n'
@@ -75,11 +75,11 @@ PROJECTS_INFO = {
                     '<b>4. Комиссии:</b>\n'
                     'На данный момент комиссии отсуствуют.'
                 ),
-                'website': 'https://app.lighter.xyz/trade/ETH'
+                'website': 'http://app.lighter.xyz/?referral=ROBSVR'
             },
             'staking': {
                 'description': (
-                    '<a href="https://app.lighter.xyz/trade/ETH">Ссылка для участия в проекте</a>\n\n'
+                    '<a href="http://app.lighter.xyz/?referral=ROBSVR">Ссылка для участия в проекте</a>\n\n'
                     '<b>1. Общая информация:</b>\n'
                     'Lighter - стейкинг стейблкоинов для получения пассивного дохода и поинтов.\n\n'
                     '<b>2. Доходность стейкинга:</b>\n'
@@ -91,7 +91,7 @@ PROJECTS_INFO = {
                     'Имеется лимит на депозит, зависит от вашего количества поинтов.\n'
                     'Если у вас 0 поинтов, то вы можете отправить в стейкинг только 25% депозита. Таким образом получается доходность <b>11.75% APY</b>'
                 ),
-                'website': 'https://app.lighter.xyz/trade/ETH'
+                'website': 'http://app.lighter.xyz/?referral=ROBSVR'
             }
         }
     },

@@ -152,7 +152,7 @@ async def show_tge_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "🗓️ <b>Информация о TGE проектов</b>\n\n"
         '<a href="https://backpack.exchange/join/robsvr">Backpack</a> - Сейчас идет 3 сезон. 4 сезон будет последним перед TGE. '
         "Таким образом TGE ожидается в феврале 2026.\n\n"
-        '<a href="https://app.lighter.xyz/trade/ETH">Lighter</a> - Конец 2025 года.\n\n'
+        '<a href="http://app.lighter.xyz/?referral=ROBSVR">Lighter</a> - TGE 30 декабря. Ожидаем новый сезон.\n\n'
         '<a href="https://pro.edgex.exchange/referral/ROBSVR">edgeX</a> - Конец 2025 года.\n\n'
         '<a href="https://app.paradex.trade/r/robsvr">Paradex</a> - конец 2025/начало 2026. '
         "Первого августа сезон продлили на 6 месяцев.\n\n"
